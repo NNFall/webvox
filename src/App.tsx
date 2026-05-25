@@ -7,6 +7,7 @@ import { ArrowLeft, User, Phone, ClipboardList, Clock, AlertCircle, CheckCircle 
 export default function App() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'contacts' | 'tasks' | 'calls' | 'events'>('contacts');
 
   const tabs = [
@@ -19,11 +20,13 @@ export default function App() {
   const handleTabChange = (tabId: typeof activeTab) => {
     setActiveTab(tabId);
     setSelectedCall(null);
+    setSelectedContactId(null);
   };
 
   const resetSelection = () => {
     setSelectedCampaign(null);
     setSelectedCall(null);
+    setSelectedContactId(null);
     setActiveTab('contacts');
   };
 
@@ -77,6 +80,141 @@ export default function App() {
               </div>
             </section>
           </motion.div>
+        ) : selectedContactId ? (
+          <motion.div key="contact" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+            {(() => {
+                const contact = selectedCampaign.contacts.find(c => c.id === selectedContactId);
+                const contactTasks = selectedCampaign.tasks.filter(t => t.contactId === selectedContactId);
+                const contactCalls = selectedCampaign.calls.filter(c => c.contactId === selectedContactId);
+                if (!contact) return null;
+
+                if (selectedCall) {
+                    return (
+                        <div className='bg-zinc-900 border border-zinc-800 p-8 rounded-3xl min-h-[600px]'>
+                            <button onClick={() => setSelectedCall(null)} className='flex items-center gap-2 text-zinc-400 hover:text-white mb-6 transition-colors'>
+                                <ArrowLeft size={20}/> К профилю контакта
+                            </button>
+                            <h3 className='text-2xl font-bold mb-6 text-white'>Звонок с клиентом {selectedCall.clientName}</h3>
+                            <div className='grid grid-cols-2 md:grid-cols-4 gap-6 text-sm mb-8 bg-zinc-950 p-6 rounded-2xl border border-zinc-800'>
+                                <div><p className='text-zinc-500 uppercase text-xs tracking-wider mb-1'>Итог</p><p className='text-emerald-400 font-mono'>{selectedCall.outcome}</p></div>
+                                <div><p className='text-zinc-500 uppercase text-xs tracking-wider mb-1'>Длительность</p><p className='text-white font-mono'>{selectedCall.duration} сек.</p></div>
+                                <div><p className='text-zinc-500 uppercase text-xs tracking-wider mb-1'>Следующий шаг</p><p className='text-white'>{selectedCall.nextStep}</p></div>
+                                <div><p className='text-zinc-500 uppercase text-xs tracking-wider mb-1'>Запись</p><p className='text-white'>{selectedCall.recordingStatus === 'ready' ? 'Доступна для прослушивания' : 'Готовится'}</p></div>
+                            </div>
+                            <div className='mb-8'>
+                                <h4 className='text-sm text-zinc-500 uppercase tracking-wider mb-3'>Саммари разговора</h4>
+                                <div className='bg-zinc-950 p-5 rounded-2xl border border-zinc-800 text-sm text-zinc-300 leading-relaxed'>
+                                    {selectedCall.summary}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 className='text-sm text-zinc-500 uppercase tracking-wider mb-3'>Расшифровка диалога</h4>
+                                <div className='bg-zinc-950 p-6 rounded-2xl border border-zinc-800 space-y-6'>
+                                    {selectedCall.transcript ? (
+                                        selectedCall.transcript.map((msg, idx) => (
+                                            <div key={idx} className={`flex flex-col ${msg.speaker === 'client' ? 'items-end' : 'items-start'}`}>
+                                                <div className='flex items-center gap-2 mb-1'>
+                                                    <span className='text-xs text-zinc-500 font-mono'>{msg.time}</span>
+                                                    <span className={`text-xs font-semibold uppercase ${msg.speaker === 'client' ? 'text-blue-400' : 'text-emerald-400'}`}>{msg.speaker === 'client' ? 'Клиент' : 'Робот'}</span>
+                                                </div>
+                                                <div className={`p-4 rounded-2xl max-w-[80%] text-sm ${msg.speaker === 'client' ? 'bg-blue-900/30 text-blue-100 rounded-tr-sm border border-blue-900/50' : 'bg-emerald-900/20 text-emerald-100 rounded-tl-sm border border-emerald-900/30'}`}>
+                                                    {msg.text}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-zinc-500 text-sm italic">Расшифровка недоступна для этого звонка.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className='space-y-6'>
+                        <button onClick={() => setSelectedContactId(null)} className='flex items-center gap-2 text-zinc-400 hover:text-white mb-6 transition-colors'>
+                            <ArrowLeft size={20}/> Назад к кампании
+                        </button>
+                        <div className='bg-zinc-900 p-8 rounded-3xl border border-zinc-800'>
+                            <div className='flex justify-between items-start mb-8'>
+                                <div>
+                                    <h2 className='text-3xl font-bold mb-2 text-white'>{contact.name}</h2>
+                                    <p className='text-zinc-400'>{contact.company} • {contact.activityType}</p>
+                                </div>
+                                <span className={`px-4 py-2 rounded-lg text-sm tracking-wide uppercase font-medium ${contact.attendanceStatus === 'attended' ? 'bg-emerald-950 text-emerald-400 border border-emerald-900' : 'bg-zinc-900 text-zinc-400 border border-zinc-700'}`}>{contact.attendanceStatus === 'attended' ? 'Был на мероприятии' : 'Нет информации'}</span>
+                            </div>
+                            <div className='grid grid-cols-2 md:grid-cols-4 gap-6 text-sm bg-zinc-950 p-6 rounded-2xl border border-zinc-800'>
+                                <div><p className='text-zinc-500 uppercase text-xs mb-1 tracking-wider'>Телефон</p><p className='text-white font-mono'>{contact.phone}</p></div>
+                                <div><p className='text-zinc-500 uppercase text-xs mb-1 tracking-wider'>Условие</p><p className='text-white'>{contact.context}</p></div>
+                                <div><p className='text-zinc-500 uppercase text-xs mb-1 tracking-wider'>ЛПР</p><p className='text-white'>{contact.isDecisionMaker ? 'Да' : 'Нет'}</p></div>
+                                <div><p className='text-zinc-500 uppercase text-xs mb-1 tracking-wider'>Чек</p><p className='text-white'>{contact.averageCheck}</p></div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="md:col-span-1 space-y-6">
+                                {contactTasks.length > 0 && (
+                                    <div className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800">
+                                        <h4 className='font-medium mb-4 text-white uppercase text-sm tracking-wider'>Связанные задачи</h4>
+                                        <div className='grid gap-3'>
+                                            {contactTasks.map(t => (
+                                                <div key={t.id} className='bg-zinc-950 p-4 rounded-2xl border border-zinc-800 text-sm'>
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="font-mono text-zinc-300">Задача #{t.id}</span>
+                                                        <span className={t.status === 'completed' ? 'text-emerald-400' : 'text-zinc-400'}>{t.lastStatus}</span>
+                                                    </div>
+                                                    <p className="text-zinc-500 text-xs">Попыток дозвона: {t.attemptCount}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="md:col-span-2 space-y-6">
+                                {contactCalls.length > 0 && (
+                                    <div className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800">
+                                        <h4 className='font-medium mb-4 text-white uppercase text-sm tracking-wider'>История звонков</h4>
+                                        <div className='grid gap-4'>
+                                            {contactCalls.map(c => (
+                                                <div key={c.id} onClick={() => setSelectedCall(c)} className='bg-zinc-950 p-6 rounded-2xl border border-zinc-800 hover:border-emerald-800 transition-colors cursor-pointer group'>
+                                                    <div className='flex justify-between items-center mb-4 pb-4 border-b border-zinc-800/60'>
+                                                        <div className='flex items-center gap-4 text-sm'>
+                                                            <div>
+                                                                <p className="text-xs text-zinc-500 uppercase mb-1">Итог</p>
+                                                                <p className='text-emerald-400 font-mono'>{c.outcome}</p>
+                                                            </div>
+                                                            <div className="h-8 w-px bg-zinc-800"></div>
+                                                            <div>
+                                                                <p className="text-xs text-zinc-500 uppercase mb-1">Следующий шаг</p>
+                                                                <p className='text-white'>{c.nextStep}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className='text-xs font-mono text-zinc-500 block mb-1'>Длительность</span>
+                                                            <span className='text-zinc-300 text-sm'>{c.duration} сек</span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <p className='text-xs text-zinc-500 uppercase mb-2'>Саммари разговора</p>
+                                                        <p className='text-sm text-zinc-400 leading-relaxed group-hover:text-zinc-300 transition-colors'>{c.summary}</p>
+                                                    </div>
+                                                    <div className="mt-4 pt-4 border-t border-zinc-800/50 flex justify-end">
+                                                        <span className="text-xs text-emerald-500 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">Открыть детали <ArrowLeft size={12} className="rotate-180" /></span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+          </motion.div>
         ) : (
           <motion.div key="details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
             <button onClick={() => { setSelectedCampaign(null); setActiveTab('contacts'); }} className="flex items-center gap-2 text-zinc-400 hover:text-white mb-6 transition-colors">
@@ -125,7 +263,7 @@ export default function App() {
                                 <span>Имя</span><span>Телефон</span><span>Компания</span><span>Статус</span><span>Город</span>
                             </div>
                             {selectedCampaign.contacts.map(c => (
-                                <div key={c.id} className='grid grid-cols-5 gap-2 px-4 py-4 hover:bg-zinc-800 rounded-lg items-center text-sm'>
+                                <div key={c.id} onClick={() => setSelectedContactId(c.id)} className='cursor-pointer grid grid-cols-5 gap-2 px-4 py-4 hover:bg-zinc-800 rounded-lg items-center text-sm transition-colors border border-transparent hover:border-zinc-700'>
                                     <span className='font-semibold'>{c.name}</span>
                                     <span className='font-mono text-zinc-400'>{c.phone}</span>
                                     <span>{c.company}</span>
@@ -178,6 +316,26 @@ export default function App() {
                                 <div className='mt-6 p-4 bg-zinc-900 rounded-lg'>
                                     <p className='text-xs text-zinc-500 uppercase mb-2'>Саммари</p>
                                     <p className='text-sm text-zinc-300'>{selectedCall.summary}</p>
+                                </div>
+                                <div className='mt-6'>
+                                    <h4 className='text-sm text-zinc-500 uppercase tracking-wider mb-3'>Расшифровка диалога</h4>
+                                    <div className='bg-zinc-900 p-6 rounded-2xl border border-zinc-800 space-y-6'>
+                                        {selectedCall.transcript ? (
+                                            selectedCall.transcript.map((msg, idx) => (
+                                                <div key={idx} className={`flex flex-col ${msg.speaker === 'client' ? 'items-end' : 'items-start'}`}>
+                                                    <div className='flex items-center gap-2 mb-1'>
+                                                        <span className='text-xs text-zinc-500 font-mono'>{msg.time}</span>
+                                                        <span className={`text-xs font-semibold uppercase ${msg.speaker === 'client' ? 'text-blue-400' : 'text-emerald-400'}`}>{msg.speaker === 'client' ? 'Клиент' : 'Робот'}</span>
+                                                    </div>
+                                                    <div className={`p-4 rounded-2xl max-w-[80%] text-sm ${msg.speaker === 'client' ? 'bg-blue-900/30 text-blue-100 rounded-tr-sm border border-blue-900/50' : 'bg-emerald-900/20 text-emerald-100 rounded-tl-sm border border-emerald-900/30'}`}>
+                                                        {msg.text}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-zinc-500 text-sm italic">Расшифровка недоступна для этого звонка.</p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )

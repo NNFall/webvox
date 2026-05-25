@@ -4,6 +4,7 @@ export interface Contact {
   name: string;
   company: string;
   attendanceStatus: 'attended' | 'not_attended';
+  city: string;
   activityType: string;
   isDecisionMaker: boolean;
   averageCheck: string;
@@ -19,8 +20,15 @@ export interface OutboundTask {
   attemptCount: number;
 }
 
+export interface CallTranscriptMessage {
+  speaker: 'robot' | 'client';
+  text: string;
+  time: string;
+}
+
 export interface Call {
   id: number;
+  contactId: number;
   clientName: string;
   status: string;
   duration: number; // in seconds
@@ -28,6 +36,7 @@ export interface Call {
   outcome: string;
   nextStep: string;
   recordingStatus: 'ready' | 'preparing' | 'error';
+  transcript?: CallTranscriptMessage[];
 }
 
 export interface OutboundEvent {
