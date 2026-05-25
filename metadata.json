@@ -1,0 +1,6 @@
+{
+  "name": "Outbound Calling Dashboard",
+  "description": "A professional management dashboard for outbound calling campaigns, featuring campaign oversight, contact management, call recording playback, and technical diagnostics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
